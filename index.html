@@ -50,7 +50,11 @@
             border-radius: 5px;
             box-sizing: border-box;
         }
-
+        
+        .form-group select {
+            height: 150px; /* Atur tinggi agar bisa melihat banyak pilihan */
+        }
+        
         button.main-button {
             width: 100%;
             padding: 12px;
@@ -133,9 +137,8 @@
             
             <div class="form-group">
                 <label>Pilih Surat:</label>
-                <select id="surat-select" required>
-                    <option value="">-- Pilih Surat --</option>
-                </select>
+                <select id="surat-select" multiple>
+                    </select>
             </div>
 
             <div class="form-group">
@@ -177,63 +180,76 @@
 
             let laporanHafalan = JSON.parse(localStorage.getItem('laporanHafalan')) || [];
             let lastClickedAyat = null;
+            let currentSelectedSurahs = [];
 
             function tampilkanLaporan() {
                 daftarLaporan.innerHTML = '';
                 laporanHafalan.forEach(laporan => {
                     const listItem = document.createElement('li');
+                    const suratText = Array.isArray(laporan.surat) ? laporan.surat.join(', ') : laporan.surat;
                     listItem.innerHTML = `
-                        <strong>${laporan.tanggal}</strong> - Surat ${laporan.surat}, Ayat ${laporan.ayat.join(', ')}
+                        <strong>${laporan.tanggal}</strong> - Surat ${suratText}, Ayat ${laporan.ayat.join(', ')}
                     `;
                     daftarLaporan.appendChild(listItem);
                 });
             }
 
-            suratSelect.addEventListener('change', () => {
+            function populateAyatList() {
                 ayatList.innerHTML = '';
-                const namaSurat = suratSelect.value;
                 lastClickedAyat = null;
+                const selectedSurahs = Array.from(suratSelect.selectedOptions).map(option => option.value);
 
-                if (namaSurat) {
-                    const jumlahAyat = dataSurat[namaSurat];
-                    for (let i = 1; i <= jumlahAyat; i++) {
-                        const ayatItem = document.createElement('div');
-                        ayatItem.classList.add('ayat-item');
-                        ayatItem.textContent = i;
-                        ayatItem.addEventListener('click', (e) => {
-                            if (e.shiftKey && lastClickedAyat) {
-                                const currentAyat = parseInt(ayatItem.textContent);
-                                const lastAyat = parseInt(lastClickedAyat.textContent);
-                                const start = Math.min(currentAyat, lastAyat);
-                                const end = Math.max(currentAyat, lastAyat);
+                if (selectedSurahs.length > 0) {
+                    selectedSurahs.forEach(surat => {
+                        const jumlahAyat = dataSurat[surat];
+                        const surahTitle = document.createElement('h3');
+                        surahTitle.textContent = surat;
+                        ayatList.appendChild(surahTitle);
+                        for (let i = 1; i <= jumlahAyat; i++) {
+                            const ayatItem = document.createElement('div');
+                            ayatItem.classList.add('ayat-item');
+                            ayatItem.textContent = i;
+                            ayatItem.dataset.surat = surat; 
+                            ayatItem.addEventListener('click', () => {
+                                if (lastClickedAyat && lastClickedAyat.dataset.surat === surat) {
+                                    const currentAyat = parseInt(ayatItem.textContent);
+                                    const lastAyat = parseInt(lastClickedAyat.textContent);
+                                    const start = Math.min(currentAyat, lastAyat);
+                                    const end = Math.max(currentAyat, lastAyat);
 
-                                const allAyat = ayatList.querySelectorAll('.ayat-item');
-                                allAyat.forEach(item => {
-                                    const itemAyat = parseInt(item.textContent);
-                                    if (itemAyat >= start && itemAyat <= end) {
-                                        item.classList.add('checked');
-                                    }
-                                });
-                            } else {
-                                ayatItem.classList.toggle('checked');
-                            }
-                            lastClickedAyat = ayatItem;
-                        });
-                        ayatList.appendChild(ayatItem);
-                    }
+                                    const allAyat = ayatList.querySelectorAll(`.ayat-item[data-surat="${surat}"]`);
+                                    allAyat.forEach(item => {
+                                        const itemAyat = parseInt(item.textContent);
+                                        if (itemAyat >= start && itemAyat <= end) {
+                                            item.classList.add('checked');
+                                        }
+                                    });
+                                } else {
+                                    ayatItem.classList.toggle('checked');
+                                }
+                                lastClickedAyat = ayatItem;
+                            });
+                            ayatList.appendChild(ayatItem);
+                        }
+                    });
                 }
-            });
+            }
+
+            suratSelect.addEventListener('change', populateAyatList);
 
             formLaporan.addEventListener('submit', (e) => {
                 e.preventDefault();
 
                 const tanggal = document.getElementById('tanggal').value;
-                const surat = suratSelect.value;
+                const selectedSurahs = Array.from(suratSelect.selectedOptions).map(option => option.value);
                 const ayatDicentang = Array.from(ayatList.querySelectorAll('.ayat-item.checked'))
-                                        .map(item => item.textContent);
-
-                if (!surat) {
-                    alert('Silakan pilih surat.');
+                                        .map(item => ({
+                                            surat: item.dataset.surat,
+                                            ayat: item.textContent
+                                        }));
+                
+                if (selectedSurahs.length === 0) {
+                    alert('Silakan pilih setidaknya satu surat.');
                     return;
                 }
                 
@@ -241,14 +257,17 @@
                     alert('Silakan pilih setidaknya satu ayat.');
                     return;
                 }
-
-                const laporanBaru = {
-                    tanggal: tanggal,
-                    surat: surat,
-                    ayat: ayatDicentang
-                };
-
-                laporanHafalan.unshift(laporanBaru);
+                
+                const laporanBySurat = selectedSurahs.map(surat => {
+                    const ayatSuratIni = ayatDicentang.filter(a => a.surat === surat).map(a => a.ayat);
+                    return {
+                        tanggal: tanggal,
+                        surat: surat,
+                        ayat: ayatSuratIni
+                    };
+                });
+                
+                laporanHafalan.unshift(...laporanBySurat);
                 localStorage.setItem('laporanHafalan', JSON.stringify(laporanHafalan));
 
                 tampilkanLaporan();
