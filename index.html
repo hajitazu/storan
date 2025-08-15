@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Hafalan</title>
+    <title>Laporan Hafalan Juz 29 & 30</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -152,7 +152,6 @@
             const suratSelect = document.getElementById('surat-select');
             const ayatList = document.getElementById('ayat-list');
 
-            // Data lengkap untuk Juz 29 & 30
             const dataSurat = {
                 // Juz 29
                 "Al-Mulk": 30,
@@ -215,26 +214,8 @@
                 suratSelect.appendChild(option);
             }
 
-            // Mengisi daftar ayat saat surat dipilih
-            suratSelect.addEventListener('change', () => {
-                ayatList.innerHTML = ''; // Kosongkan daftar ayat
-                const namaSurat = suratSelect.value;
-                if (namaSurat) {
-                    const jumlahAyat = dataSurat[namaSurat];
-                    for (let i = 1; i <= jumlahAyat; i++) {
-                        const ayatItem = document.createElement('div');
-                        ayatItem.classList.add('ayat-item');
-                        ayatItem.textContent = i;
-                        ayatItem.addEventListener('click', () => {
-                            ayatItem.classList.toggle('checked');
-                        });
-                        ayatList.appendChild(ayatItem);
-                    }
-                }
-            });
-
-            // Mengambil data dari Local Storage saat halaman dimuat
             let laporanHafalan = JSON.parse(localStorage.getItem('laporanHafalan')) || [];
+            let lastClickedAyat = null;
 
             // Fungsi untuk menampilkan laporan yang sudah ada
             function tampilkanLaporan() {
@@ -247,6 +228,42 @@
                     daftarLaporan.appendChild(listItem);
                 });
             }
+
+            // Mengisi daftar ayat saat surat dipilih
+            suratSelect.addEventListener('change', () => {
+                ayatList.innerHTML = '';
+                const namaSurat = suratSelect.value;
+                lastClickedAyat = null;
+
+                if (namaSurat) {
+                    const jumlahAyat = dataSurat[namaSurat];
+                    for (let i = 1; i <= jumlahAyat; i++) {
+                        const ayatItem = document.createElement('div');
+                        ayatItem.classList.add('ayat-item');
+                        ayatItem.textContent = i;
+                        ayatItem.addEventListener('click', (e) => {
+                            if (e.shiftKey && lastClickedAyat) {
+                                const currentAyat = parseInt(ayatItem.textContent);
+                                const lastAyat = parseInt(lastClickedAyat.textContent);
+                                const start = Math.min(currentAyat, lastAyat);
+                                const end = Math.max(currentAyat, lastAyat);
+
+                                const allAyat = ayatList.querySelectorAll('.ayat-item');
+                                allAyat.forEach(item => {
+                                    const itemAyat = parseInt(item.textContent);
+                                    if (itemAyat >= start && itemAyat <= end) {
+                                        item.classList.add('checked');
+                                    }
+                                });
+                            } else {
+                                ayatItem.classList.toggle('checked');
+                            }
+                            lastClickedAyat = ayatItem;
+                        });
+                        ayatList.appendChild(ayatItem);
+                    }
+                }
+            });
 
             // Menangani pengiriman form
             formLaporan.addEventListener('submit', (e) => {
@@ -275,6 +292,7 @@
 
                 formLaporan.reset();
                 ayatList.innerHTML = '';
+                lastClickedAyat = null;
             });
 
             tampilkanLaporan();
