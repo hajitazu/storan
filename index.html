@@ -51,7 +51,7 @@
             box-sizing: border-box;
         }
 
-        button {
+        button.main-button {
             width: 100%;
             padding: 12px;
             background-color: #28a745;
@@ -63,8 +63,17 @@
             transition: background-color 0.3s ease;
         }
 
-        button:hover {
+        button.main-button:hover {
             background-color: #218838;
+        }
+        
+        button.reset-button {
+            background-color: #dc3545;
+            margin-top: 10px;
+        }
+        
+        button.reset-button:hover {
+            background-color: #c82333;
         }
 
         .laporan-list {
@@ -124,7 +133,7 @@
             
             <div class="form-group">
                 <label>Pilih Surat:</label>
-                <select id="surat-select" required multiple>
+                <select id="surat-select" required>
                     <option value="">-- Pilih Surat --</option>
                 </select>
             </div>
@@ -135,7 +144,8 @@
                     </div>
             </div>
 
-            <button type="submit">Tambahkan Laporan</button>
+            <button type="submit" class="main-button">Tambahkan Laporan</button>
+            <button type="button" id="reset-button" class="main-button reset-button">Reset Riwayat Hafalan</button>
         </form>
 
         <div class="laporan-list">
@@ -151,6 +161,7 @@
             const daftarLaporan = document.getElementById('daftar-laporan');
             const suratSelect = document.getElementById('surat-select');
             const ayatList = document.getElementById('ayat-list');
+            const resetButton = document.getElementById('reset-button');
 
             const dataSurat = {
                 "Al-Mulk": 30, "Al-Qalam": 52, "Al-Haqqah": 52, "Al-Ma'arij": 44, "Nuh": 28, "Al-Jinn": 28, "Al-Muzzammil": 20, "Al-Muddathir": 56, "Al-Qiyamah": 40, "Al-Insan": 31, "Al-Mursalat": 50,
@@ -166,7 +177,6 @@
 
             let laporanHafalan = JSON.parse(localStorage.getItem('laporanHafalan')) || [];
             let lastClickedAyat = null;
-            let lastClickedSurat = null;
 
             function tampilkanLaporan() {
                 daftarLaporan.innerHTML = '';
@@ -179,39 +189,37 @@
                 });
             }
 
-            suratSelect.addEventListener('change', (e) => {
-                if (!e.ctrlKey && !e.metaKey) {
-                    ayatList.innerHTML = '';
-                    const namaSurat = suratSelect.value;
-                    lastClickedAyat = null;
-                    
-                    if (namaSurat) {
-                        const jumlahAyat = dataSurat[namaSurat];
-                        for (let i = 1; i <= jumlahAyat; i++) {
-                            const ayatItem = document.createElement('div');
-                            ayatItem.classList.add('ayat-item');
-                            ayatItem.textContent = i;
-                            ayatItem.addEventListener('click', (e) => {
-                                if (e.shiftKey && lastClickedAyat) {
-                                    const currentAyat = parseInt(ayatItem.textContent);
-                                    const lastAyat = parseInt(lastClickedAyat.textContent);
-                                    const start = Math.min(currentAyat, lastAyat);
-                                    const end = Math.max(currentAyat, lastAyat);
+            suratSelect.addEventListener('change', () => {
+                ayatList.innerHTML = '';
+                const namaSurat = suratSelect.value;
+                lastClickedAyat = null;
 
-                                    const allAyat = ayatList.querySelectorAll('.ayat-item');
-                                    allAyat.forEach(item => {
-                                        const itemAyat = parseInt(item.textContent);
-                                        if (itemAyat >= start && itemAyat <= end) {
-                                            item.classList.add('checked');
-                                        }
-                                    });
-                                } else {
-                                    ayatItem.classList.toggle('checked');
-                                }
-                                lastClickedAyat = ayatItem;
-                            });
-                            ayatList.appendChild(ayatItem);
-                        }
+                if (namaSurat) {
+                    const jumlahAyat = dataSurat[namaSurat];
+                    for (let i = 1; i <= jumlahAyat; i++) {
+                        const ayatItem = document.createElement('div');
+                        ayatItem.classList.add('ayat-item');
+                        ayatItem.textContent = i;
+                        ayatItem.addEventListener('click', (e) => {
+                            if (e.shiftKey && lastClickedAyat) {
+                                const currentAyat = parseInt(ayatItem.textContent);
+                                const lastAyat = parseInt(lastClickedAyat.textContent);
+                                const start = Math.min(currentAyat, lastAyat);
+                                const end = Math.max(currentAyat, lastAyat);
+
+                                const allAyat = ayatList.querySelectorAll('.ayat-item');
+                                allAyat.forEach(item => {
+                                    const itemAyat = parseInt(item.textContent);
+                                    if (itemAyat >= start && itemAyat <= end) {
+                                        item.classList.add('checked');
+                                    }
+                                });
+                            } else {
+                                ayatItem.classList.toggle('checked');
+                            }
+                            lastClickedAyat = ayatItem;
+                        });
+                        ayatList.appendChild(ayatItem);
                     }
                 }
             });
@@ -220,19 +228,24 @@
                 e.preventDefault();
 
                 const tanggal = document.getElementById('tanggal').value;
-                const surat = Array.from(suratSelect.selectedOptions).map(option => option.value);
+                const surat = suratSelect.value;
                 const ayatDicentang = Array.from(ayatList.querySelectorAll('.ayat-item.checked'))
                                         .map(item => item.textContent);
 
-                if (surat.length === 0) {
-                    alert('Silakan pilih setidaknya satu surat.');
+                if (!surat) {
+                    alert('Silakan pilih surat.');
                     return;
                 }
                 
+                if (ayatDicentang.length === 0) {
+                    alert('Silakan pilih setidaknya satu ayat.');
+                    return;
+                }
+
                 const laporanBaru = {
                     tanggal: tanggal,
                     surat: surat,
-                    ayat: ayatDicentang.length > 0 ? ayatDicentang : ['Semua Ayat']
+                    ayat: ayatDicentang
                 };
 
                 laporanHafalan.unshift(laporanBaru);
@@ -243,6 +256,15 @@
                 formLaporan.reset();
                 ayatList.innerHTML = '';
                 lastClickedAyat = null;
+            });
+
+            resetButton.addEventListener('click', () => {
+                const konfirmasi = confirm("Apakah Anda yakin ingin menghapus semua riwayat hafalan? Aksi ini tidak bisa dibatalkan.");
+                if (konfirmasi) {
+                    localStorage.removeItem('laporanHafalan');
+                    laporanHafalan = [];
+                    tampilkanLaporan();
+                }
             });
 
             tampilkanLaporan();
