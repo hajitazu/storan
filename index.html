@@ -99,7 +99,7 @@
 
         .ayat-list {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); /* Ukuran kotak seragam */
             gap: 10px;
             max-height: 200px;
             overflow-y: auto;
@@ -112,17 +112,29 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            height: 50px;
+            width: 100%;
             background: #f1f3f5;
             padding: 8px;
             border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.2s;
+            box-sizing: border-box; /* Pastikan ukuran tetap */
         }
 
         .ayat-item.checked {
             background-color: #28a745;
             color: white;
             font-weight: bold;
+        }
+
+        .surah-title {
+            grid-column: 1 / -1; /* Judul surah mengambil seluruh lebar */
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-top: 10px;
+            margin-bottom: 5px;
         }
     </style>
 </head>
@@ -180,7 +192,6 @@
 
             let laporanHafalan = JSON.parse(localStorage.getItem('laporanHafalan')) || [];
             let lastClickedAyat = null;
-            let currentSelectedSurahs = [];
 
             function tampilkanLaporan() {
                 daftarLaporan.innerHTML = '';
@@ -202,8 +213,9 @@
                 if (selectedSurahs.length > 0) {
                     selectedSurahs.forEach(surat => {
                         const jumlahAyat = dataSurat[surat];
-                        const surahTitle = document.createElement('h3');
-                        surahTitle.textContent = surat;
+                        const surahTitle = document.createElement('div');
+                        surahTitle.classList.add('surah-title');
+                        surahTitle.textContent = `${surat} (${jumlahAyat} ayat)`;
                         ayatList.appendChild(surahTitle);
                         for (let i = 1; i <= jumlahAyat; i++) {
                             const ayatItem = document.createElement('div');
@@ -211,7 +223,7 @@
                             ayatItem.textContent = i;
                             ayatItem.dataset.surat = surat; 
                             ayatItem.addEventListener('click', () => {
-                                if (lastClickedAyat && lastClickedAyat.dataset.surat === surat) {
+                                if (lastClickedAyat && lastClickedAyat.dataset.surat === ayatItem.dataset.surat) {
                                     const currentAyat = parseInt(ayatItem.textContent);
                                     const lastAyat = parseInt(lastClickedAyat.textContent);
                                     const start = Math.min(currentAyat, lastAyat);
@@ -222,9 +234,12 @@
                                         const itemAyat = parseInt(item.textContent);
                                         if (itemAyat >= start && itemAyat <= end) {
                                             item.classList.add('checked');
+                                        } else {
+                                            item.classList.remove('checked');
                                         }
                                     });
                                 } else {
+                                    ayatList.querySelectorAll(`.ayat-item[data-surat="${surat}"]`).forEach(item => item.classList.remove('checked'));
                                     ayatItem.classList.toggle('checked');
                                 }
                                 lastClickedAyat = ayatItem;
